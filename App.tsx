@@ -76,10 +76,6 @@ const App: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
-    return () => {
-      tasksNode.off();
-    };
-  }, []);
 
   const tasks = useMemo(() => Object.values(tasksMap), [tasksMap]);
 
