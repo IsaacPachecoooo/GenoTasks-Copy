@@ -93,7 +93,7 @@ const TaskTable: React.FC<Props> = ({ tasks, allTasks, role, onUpdateTask, onVie
                   )}
                 </td>
                 <td className="px-6 py-6">
-                              <div className={`text-base font-bold text-gray-800 whitespace-normal break-words leading-tight ${ task.status === 'Completada' ? 'line-through opacity-60' : '' }`}>
+                              <div className={``text-base font-bold t-ext-gray-800 whitespace-normal break-words leading-tight ${ task.status === 'Completada' ? 'line-through opacity-60' : '' }`}`>
               {task.title}
             </div>
             </td>                <td className="px-6 py-6">
