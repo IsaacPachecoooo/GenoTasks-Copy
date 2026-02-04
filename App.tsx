@@ -1,18 +1,27 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Task, UserRole, Team, Area, Priority, Status, Comment } from './types';
-import { TEAMS, AREAS, PRIORITIES } from './constants';
-import { sortTasks, loadTasks, saveTasks, getExportText, downloadAsText, getWeekStringFromDate, parseImportText } from './utils';
+import Gun from 'gun';
+import { Task, UserRole, Team, Area, Status } from './types';
+import { TEAMS, AREAS } from './constants';
+import { sortTasks, getExportText, downloadAsText, getWeekStringFromDate, parseImportText } from './utils';
 import TaskCreationWizard from './components/TaskCreationWizard';
 import TaskTable from './components/TaskTable';
 import TaskDetailModal from './components/TaskDetailModal';
 
+// Inicializar Gun con un par de servidores relay públicos para redundancia
+const gun = Gun({
+  peers: [
+    'https://gun-manhattan.herokuapp.com/gun',
+    'https://relay.peer.ooo/gun'
+  ]
+});
+
 const App: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksMap, setTasksMap] = useState<Record<string, Task>>({});
   const [role, setRole] = useState<UserRole>('Leader');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+  const [isSynced, setIsSynced] = useState(false);
   
   const parseLocalDatePicker = (val: string): Date => {
     const [year, month, day] = val.split('-').map(Number);
@@ -30,19 +39,39 @@ const App: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<Status | 'Todos'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Sincronización en tiempo real con Gun.js
   useEffect(() => {
-    const loaded = loadTasks();
-    if (loaded && Array.isArray(loaded)) {
-      setTasks(loaded);
-    }
-    setIsInitialLoadDone(true);
+    // Usamos un nodo específico para las tareas
+    const tasksNode = gun.get('genotasks_production_v2_tasks');
+    
+    tasksNode.map().on((data: any, id: string) => {
+      if (data === null) {
+        setTasksMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[id];
+          return newMap;
+        });
+      } else {
+        // Gun devuelve los datos planos, los parseamos si es necesario (comentarios son un string JSON)
+        try {
+          const task: Task = {
+            ...data,
+            comments: data.comments ? JSON.parse(data.comments) : []
+          };
+          setTasksMap(prev => ({ ...prev, [id]: task }));
+        } catch (e) {
+          console.error("Error al parsear tarea de Gun:", e);
+        }
+      }
+      setIsSynced(true);
+    });
+
+    return () => {
+      tasksNode.off();
+    };
   }, []);
 
-  useEffect(() => {
-    if (isInitialLoadDone) {
-      saveTasks(tasks);
-    }
-  }, [tasks, isInitialLoadDone]);
+  const tasks = useMemo(() => Object.values(tasksMap), [tasksMap]);
 
   const resetFilters = (includeWeek = false) => {
     setFilterArea('Todos');
@@ -70,20 +99,28 @@ const App: React.FC = () => {
   }, [tasks, filterWeek, filterArea, filterTeam, filterStatus, searchTerm]);
 
   const handleSaveNewTask = (task: Task) => {
-    setTasks(prev => [...prev, task]);
+    const dataToSave = {
+      ...task,
+      comments: JSON.stringify(task.comments)
+    };
+    gun.get('genotasks_production_v2_tasks').get(task.id).put(dataToSave as any);
     setIsWizardOpen(false);
     setFilterWeek(workingWeek);
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
-    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    const dataToSave = {
+      ...updatedTask,
+      comments: JSON.stringify(updatedTask.comments)
+    };
+    gun.get('genotasks_production_v2_tasks').get(updatedTask.id).put(dataToSave as any);
     if (selectedTask?.id === updatedTask.id) {
        setSelectedTask(updatedTask);
     }
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+    gun.get('genotasks_production_v2_tasks').get(id).put(null as any);
     if (selectedTask?.id === id) setSelectedTask(null);
   };
 
@@ -111,72 +148,17 @@ const App: React.FC = () => {
       if (content) {
         const importedTasks = parseImportText(content);
         if (importedTasks.length > 0) {
-          let updatedCount = 0;
-          let addedCount = 0;
-          
-          setTasks(prev => {
-            const currentTasks = [...prev];
-            
-            importedTasks.forEach(imported => {
-              const existingIndex = currentTasks.findIndex(existing => 
-                existing.title.trim().toLowerCase() === imported.title.trim().toLowerCase() &&
-                existing.week === imported.week &&
-                existing.area === imported.area &&
-                existing.responsible === imported.responsible &&
-                existing.requester.trim().toLowerCase() === imported.requester.trim().toLowerCase()
-              );
-
-              if (existingIndex !== -1) {
-                const existing = currentTasks[existingIndex];
-                let changed = false;
-
-                if (!existing.description?.trim() && imported.description?.trim()) {
-                  existing.description = imported.description;
-                  changed = true;
-                }
-
-                if (!existing.basecampLink?.trim() && imported.basecampLink?.trim()) {
-                  existing.basecampLink = imported.basecampLink;
-                  if (existing.status === 'Bloqueada (falta Basecamp)') {
-                    existing.status = 'Activa';
-                  }
-                  changed = true;
-                }
-
-                if (!existing.deliveryDate?.trim() && imported.deliveryDate?.trim()) {
-                  existing.deliveryDate = imported.deliveryDate;
-                  changed = true;
-                }
-
-                const existingCommentsText = new Set(existing.comments.map(c => `${c.author}:${c.text.trim()}`));
-                const newComments = imported.comments.filter(ic => !existingCommentsText.has(`${ic.author}:${ic.text.trim()}`));
-                
-                if (newComments.length > 0) {
-                  existing.comments = [...existing.comments, ...newComments];
-                  changed = true;
-                }
-
-                if (changed) {
-                  currentTasks[existingIndex] = { ...existing };
-                  updatedCount++;
-                }
-              } else {
-                currentTasks.push(imported);
-                addedCount++;
-              }
-            });
-
-            return currentTasks;
+          importedTasks.forEach(imported => {
+            const dataToSave = {
+              ...imported,
+              comments: JSON.stringify(imported.comments)
+            };
+            gun.get('genotasks_production_v2_tasks').get(imported.id).put(dataToSave as any);
           });
-
-          if (addedCount > 0 || updatedCount > 0) {
-            alert(`¡Fusión completada!\n- ${addedCount} tareas nuevas añadidas.\n- ${updatedCount} tareas existentes actualizadas con datos nuevos de entrega, descripción o Basecamp.`);
-            resetFilters(true);
-          } else {
-            alert('El sistema ya está al día con la información del archivo.');
-          }
+          alert('Importación completada y sincronizada.');
+          resetFilters(true);
         } else {
-          alert('No se detectaron tareas válidas en el archivo.');
+          alert('No se detectaron tareas válidas.');
         }
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -205,7 +187,10 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-3xl font-black tracking-tight text-gray-900 leading-none">GenoTasks</h1>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-3xl font-black tracking-tight text-gray-900 leading-none">GenoTasks</h1>
+                <div className={`w-2.5 h-2.5 rounded-full ${isSynced ? 'bg-brand animate-pulse' : 'bg-orange-400'}`} title={isSynced ? "Sincronizado" : "Conectando..."}></div>
+              </div>
               <span className="text-xs text-gray-400 font-black uppercase tracking-[0.05em] mt-1 whitespace-nowrap">Digital Branding Exp Workflow</span>
             </div>
           </div>
@@ -213,7 +198,7 @@ const App: React.FC = () => {
           <div className="flex flex-wrap items-center gap-5">
             <div className="bg-brand-light/50 border border-brand/20 p-2.5 rounded-xl flex items-center space-x-4">
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-brand-dark uppercase tracking-widest leading-none mb-1.5">Semana de Trabajo</span>
+                <span className="text-[10px] font-black text-brand-dark uppercase tracking-widest leading-none mb-1.5 whitespace-nowrap">Semana de Trabajo</span>
                 <input 
                   type="date"
                   value={workingDate}
@@ -222,7 +207,7 @@ const App: React.FC = () => {
                 />
               </div>
               <div className="h-10 w-[1px] bg-brand/20"></div>
-              <span className="text-sm font-black text-brand-dark">{workingWeek}</span>
+              <span className="text-sm font-black text-brand-dark whitespace-nowrap">{workingWeek}</span>
             </div>
 
             <div className="bg-gray-100 p-1.5 rounded-xl flex items-center border border-gray-200">

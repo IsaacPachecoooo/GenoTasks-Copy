@@ -6,7 +6,7 @@ import { checkPriorityLimit } from '../utils';
 
 interface Props {
   tasks: Task[];
-  allTasks: Task[]; // Se necesita para validar límites de prioridad al cambiarla aquí
+  allTasks: Task[]; 
   role: UserRole;
   onUpdateTask: (task: Task) => void;
   onViewDetails: (task: Task) => void;
@@ -54,18 +54,18 @@ const TaskTable: React.FC<Props> = ({ tasks, allTasks, role, onUpdateTask, onVie
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 table-fixed">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 no-scrollbar">
+      <div className="overflow-x-auto no-scrollbar">
+        <table className="min-w-full divide-y divide-gray-200 table-auto">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-32">Prioridad</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider">Tarea</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-32">Entrega</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-44">Persona</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-48">Responsable</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-44">Estado</th>
-              <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-wider w-24">Acciones</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[120px]">Prioridad</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider min-w-[350px]">Tarea</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[110px]">Entrega</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[180px]">Persona</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[200px]">Responsable</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[180px]">Estado</th>
+              <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-wider w-[100px]">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">

@@ -43,13 +43,23 @@
         input[type="week"]::-webkit-calendar-picker-indicator:hover {
           background-color: rgba(0, 200, 117, 0.1);
         }
+
+        /* Ocultar scrollbars laterales en la tabla */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
     </style>
 <script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "gun": "https://esm.sh/gun@0.2020.1239"
   }
 }
 </script>
