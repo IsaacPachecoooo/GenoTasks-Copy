@@ -26,10 +26,12 @@ const TaskTable: React.FC<Props> = ({ tasks, allTasks, role, onUpdateTask, onVie
     onUpdateTask({ ...task, priority: newPriority });
   };
 
-  const handleStatusChange = (task: Task, newStatus: Status) => {
-    onUpdateTask({ ...task, status: newStatus });
+    const handleStatusChange = (task: Task, newStatus: Status) => {
+    const updatedTask = newStatus === 'Completada' 
+      ? { ...task, status: newStatus, priority: 'Baja' as Priority }
+      : { ...task, status: newStatus };
+    onUpdateTask(updatedTask);
   };
-
   const getPriorityColor = (p: string) => {
     switch(p) {
       case 'Urgente': return 'bg-purple-100 text-purple-800 border-purple-200 font-black animate-pulse';
@@ -91,10 +93,9 @@ const TaskTable: React.FC<Props> = ({ tasks, allTasks, role, onUpdateTask, onVie
                   )}
                 </td>
                 <td className="px-6 py-6">
-                  <div className="text-base font-bold text-gray-800 whitespace-normal break-words leading-tight">
-                    {task.title}
-                  </div>
-                </td>
+                              <div className={`text-base font-bold text-gray-800 whitespace-normal break-words leading-tight ${ task.status === 'Completada' ? 'line-through opacity-60' : '' }`}>
+              {task.title}
+            </div>td>
                 <td className="px-6 py-6">
                   <span className={`text-[11px] font-black uppercase whitespace-nowrap ${task.deliveryDate ? 'text-brand-dark' : 'text-gray-300 italic'}`}>
                     {formatDeliveryDate(task.deliveryDate)}
