@@ -44,6 +44,9 @@ const App: React.FC = () => {
   const [filterTeam, setFilterTeam] = useState<Team | 'Todos'>('Todos');
   const [filterStatus, setFilterStatus] = useState<Status | 'Todos'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+    const [showHeadPasswordModal, setShowHeadPasswordModal] = useState(false);
+    const [headPasswordInput, setHeadPasswordInput] = useState('');
+    const [headPasswordError, setHeadPasswordError] = useState(false);
 
   // Sincronización en tiempo real con Gun.js
   useEffect(() => {
@@ -180,6 +183,23 @@ const App: React.FC = () => {
     }
   };
 
+    const handleHeadClick = () => {
+          setHeadPasswordInput('');
+          setHeadPasswordError(false);
+          setShowHeadPasswordModal(true);
+        };
+
+    const handleHeadPasswordSubmit = () => {
+          if (headPasswordInput === 'Head2026') {
+                  setRole('Head');
+                  setShowHeadPasswordModal(false);
+                  setHeadPasswordInput('');
+                  setHeadPasswordError(false);
+                } else {
+                  setHeadPasswordError(true);
+                }
+        };
+
   return (
     <div className="min-h-screen pb-20 bg-gray-50 text-base">
       <header className="bg-white border-b sticky top-0 z-40 px-6 py-5 shadow-sm">
@@ -224,7 +244,7 @@ const App: React.FC = () => {
                  LEADER
                </button>
                <button 
-                onClick={() => setRole('Head')}
+                          onClick={handleHeadClick}
                 className={`px-5 py-2 text-xs font-black rounded-lg transition-all ${role === 'Head' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                >
                  HEAD
@@ -412,6 +432,52 @@ const App: React.FC = () => {
           onDelete={handleDeleteTask}
         />
       )}
+            {showHeadPasswordModal && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
+                                        <div className="flex items-center space-x-3 mb-6">
+                                                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                                                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                                        </div>
+                                                        <div>
+                                                                          <h2 className="text-lg font-black text-gray-900">Acceso HEAD</h2>
+                                                                          <p className="text-xs text-gray-400 font-medium">Ingresa la contraseña para continuar</p>
+                                                                        </div>
+                                                      </div>
+                                        <div className="space-y-4">
+                                                        <div>
+                                                                          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">Contraseña</label>
+                                                                          <input
+                                                                                              type="password"
+                                                                                              value={headPasswordInput}
+                                                                                              onChange={e => setHeadPasswordInput(e.target.value)}
+                                                                                              onKeyDown={e => e.key === 'Enter' && handleHeadPasswordSubmit()}
+                                                                                              placeholder="Ingresa la contraseña"
+                                                                                              className={`w-full p-3 border rounded-xl text-sm outline-none ${headPasswordError ? 'border-red-400 bg-red-50 focus:ring-2 focus:ring-red-300' : 'border-gray-200 focus:ring-2 focus:ring-blue-300'}`}
+                                                                                              autoFocus
+                                                                                            />
+                                                                          {headPasswordError && (
+                                  <p className="text-xs text-red-500 font-medium mt-1">Contraseña incorrecta. Intenta de nuevo.</p>
+                                )}
+                                                                        </div>
+                                                        <div className="flex space-x-3">
+                                                                          <button
+                                                                                              onClick={() => setShowHeadPasswordModal(false)}
+                                                                                              className="flex-1 py-2.5 text-sm font-black text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                                                                                            >
+                                                                                              Cancelar
+                                                                                            </button>
+                                                                          <button
+                                                                                              onClick={handleHeadPasswordSubmit}
+                                                                                              className="flex-1 py-2.5 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
+                                                                                            >
+                                                                                              Acceder
+                                                                                            </button>
+                                                                        </div>
+                                                      </div>
+                                      </div>
+                        </div>
+            )}
     </div>
   );
 };
